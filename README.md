@@ -31,6 +31,10 @@ The **Skills Manager** operates on a simple but effective linking philosophy:
     -   It treats markdown headers as "Pack Names" and link lists as "Skill Collections".
     -   This allows for dynamic, curated installations without hardcoding lists in the script.
 
+4.  **Interactive Terminal Output**:
+    -   **Clickable Links**: Skill names in the output are clickable links (OSC 8 hyperlinks) pointing directly to the skill's `SKILL.md` file or directory.
+    -   **Rich Formatting**: Uses ANSI escape codes for clear, colored output.
+
 ---
 
 ## ⚙ Prerequisites
@@ -96,6 +100,13 @@ python skills_manager.py uninstall concise-planning
 
 ### Managing Bundles
 Bundles are curated sets of skills (e.g., "Essentials", "Security Engineer") defined in your global documentation.
+
+#### Search Bundles
+Find bundles by name or by the skills they contain.
+```bash
+python skills_manager.py bundle search "react"
+# Output: Web Wizard, TypeScript & JavaScript...
+```
 
 #### List Bundles
 See all available skill packs.
