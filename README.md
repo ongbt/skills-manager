@@ -9,6 +9,7 @@ A powerful command-line interface for managing "vibe coding" skills in your Anti
 - [User Manual](#-user-manual)
   - [Managing Skills](#managing-skills)
   - [Managing Bundles](#managing-bundles)
+  - [Managing Workflows](#managing-workflows)
   - [Project Maintenance](#project-maintenance)
 
 ---
@@ -31,7 +32,12 @@ The **Skills Manager** operates on a simple but effective linking philosophy:
     -   It treats markdown headers as "Pack Names" and link lists as "Skill Collections".
     -   This allows for dynamic, curated installations without hardcoding lists in the script.
 
-4.  **Interactive Terminal Output**:
+4.  **Workflow System**:
+    -   Based on `~/.agent/skills/data/workflows.json`.
+    -   Workflows represent end-to-end task flows (e.g., "Ship a SaaS MVP") with recommended skills.
+    -   Provides a higher-level abstraction than bundles for goal-oriented setup.
+
+5.  **Interactive Terminal Output**:
     -   **Clickable Links**: Skill names in the output are clickable links (OSC 8 hyperlinks) pointing directly to the skill's `SKILL.md` file or directory.
     -   **Rich Formatting**: Uses ANSI escape codes for clear, colored output.
 
@@ -124,6 +130,29 @@ python skills_manager.py bundle install "Essentials"
 Remove all skills associated with a specific pack.
 ```bash
 python skills_manager.py bundle uninstall "Essentials"
+```
+
+---
+
+### Managing Workflows
+Workflows are goal-oriented collections of skills designed for specific tasks (e.g., "Ship specific MVP", "Security Audit").
+
+#### List Workflows
+View all available workflows and their descriptions.
+```bash
+python skills_manager.py workflow list
+```
+
+#### Search Workflows
+Find workflows by ID, name, description, or included skills.
+```bash
+python skills_manager.py workflow search "SaaS"
+```
+
+#### Install Workflow Skills
+Install all skills recommended for a specific workflow.
+```bash
+python skills_manager.py workflow install ship-saas-mvp
 ```
 
 ---
