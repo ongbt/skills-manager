@@ -32,6 +32,14 @@ if os.name == 'nt':
 else:
     BUNDLES_FILE = BUNDLES_FILE_UNIX
 
+WORKFLOWS_FILE_WINDOWS = Path(os.path.expandvars(r"$USERPROFILE\.agent\skills\data\workflows.json"))
+WORKFLOWS_FILE_UNIX = Path.home() / ".agent" / "skills" / "data" / "workflows.json"
+
+if os.name == 'nt':
+    WORKFLOWS_FILE = WORKFLOWS_FILE_WINDOWS
+else:
+    WORKFLOWS_FILE = WORKFLOWS_FILE_UNIX
+
 
 # --- Helper Functions ---
 def print_success(msg):
@@ -404,6 +412,185 @@ def uninstall_bundle(bundle_query: str):
         
     print_success(f"Bundle uninstallation complete. Processed {success_count} skills.")
 
+# --- Workflow Implementations ---
+
+def parse_workflows() -> dict:
+    """
+    Parse workflows.json to extract workflows.
+    Returns a dict mapping workflow ID/Name to the workflow object.
+    Key: workflow 'id' (e.g. 'ship-saas-mvp')
+    Value: valid dict from JSON
+    """
+    import json
+    if not WORKFLOWS_FILE.exists():
+        return {}
+
+    try:
+        with open(WORKFLOWS_FILE, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            return {w['id']: w for w in data.get('workflows', [])}
+    except Exception as e:
+        print_error(f"Failed to parse workflows.json: {e}")
+        return {}
+
+def list_workflows():
+    """3.4.1 List Workflows"""
+    print_info(f"Listing Workflows from: {WORKFLOWS_FILE}")
+    workflows = parse_workflows()
+    
+    if not workflows:
+        print_warning("No workflows found.")
+        return
+
+    for wf_id, wf in workflows.items():
+        print(f"\n🔄 \033[1m{wf['name']}\033[0m (ID: {wf_id})")
+        print(f"   {wf.get('description', '')}")
+        
+        # Collect all skills
+        all_skills = set()
+        for step in wf.get('steps', []):
+            all_skills.update(step.get('recommendedSkills', []))
+            
+        display_skills = []
+        sorted_skills = sorted(list(all_skills))
+        for s in sorted_skills:
+            path = GLOBAL_SKILLS_REPO / s / "SKILL.md"
+            display_skills.append(make_clickable(s, path.as_uri()))
+            
+        joined = ', '.join(display_skills)
+        if hasattr(joined, 'index') and len(sorted_skills) > 0:
+            print(f"   Skills: {joined}")
+        else:
+             print("   Skills: (None)")
+
+    print(f"\nTotal: {len(workflows)} workflows available.")
+
+def search_workflows(query: str):
+    """3.4.2 Search Workflows"""
+    print_info(f"Searching Workflows for '{query}'...")
+    workflows = parse_workflows()
+    
+    matches = []
+    q = query.lower()
+    
+    for wf in workflows.values():
+        # Search match name, id, description, category
+        if (q in wf['id'].lower() or 
+            q in wf['name'].lower() or 
+            q in wf.get('description', '').lower() or
+            q in wf.get('category', '').lower()):
+            matches.append(wf)
+            continue
+            
+        # Search in steps (title, goal, notes, recommendedSkills)
+        found_in_steps = False
+        for step in wf.get('steps', []):
+            if (q in step.get('title', '').lower() or
+                q in step.get('goal', '').lower() or
+                q in step.get('notes', '').lower()):
+                found_in_steps = True
+                break
+            for skill in step.get('recommendedSkills', []):
+                if q in skill.lower():
+                    found_in_steps = True
+                    break
+            if found_in_steps:
+                break
+        
+        if found_in_steps:
+            matches.append(wf)
+
+    if not matches:
+        print_warning(f"No workflows found matching '{query}'.")
+        return
+
+    for wf in matches:
+        print(f"\n🔄 \033[1m{wf['name']}\033[0m (ID: {wf['id']})")
+        print(f"   {wf.get('description', '')}")
+        
+        all_skills = set()
+        for step in wf.get('steps', []):
+            all_skills.update(step.get('recommendedSkills', []))
+            
+        display_skills = []
+        for s in sorted(list(all_skills)):
+            path = GLOBAL_SKILLS_REPO / s / "SKILL.md"
+            display_skills.append(make_clickable(s, path.as_uri()))
+            
+        print(f"   Skills: {', '.join(display_skills)}")
+
+    print(f"\nFound {len(matches)} matching workflows.")
+
+def get_skills_from_workflow(wf_data: dict) -> list:
+    skills = set()
+    for step in wf_data.get('steps', []):
+        skills.update(step.get('recommendedSkills', []))
+    return sorted(list(skills))
+
+def install_workflow(query: str):
+    """3.4.3 Install Workflow Skills"""
+    workflows = parse_workflows()
+    
+    # Exact ID match first
+    if query in workflows:
+        target_wf = workflows[query]
+    else:
+        # Fuzzy match name or ID
+        q = query.lower()
+        matches = [w for w in workflows.values() if q in w['id'].lower() or q in w['name'].lower()]
+        
+        if not matches:
+            print_error(f"No workflow found matching '{query}'")
+            return
+        if len(matches) > 1:
+            print_warning(f"Multiple workflows found matching '{query}':")
+            for m in matches:
+                print(f"  • {m['name']} (ID: {m['id']})")
+            return
+        target_wf = matches[0]
+
+    skills_to_install = get_skills_from_workflow(target_wf)
+    print_info(f"Installing workflow skills for: \033[1m{target_wf['name']}\033[0m ({len(skills_to_install)} skills)")
+    
+    count = 0
+    for skill in skills_to_install:
+        print(f"  Installing {skill}...")
+        install_skill(skill)
+        count += 1
+        
+    print_success(f"Workflow installation complete. Processed {count} skills.")
+
+def uninstall_workflow(query: str):
+    """3.4.4 Uninstall Workflow Skills"""
+    workflows = parse_workflows()
+    
+    if query in workflows:
+        target_wf = workflows[query]
+    else:
+        q = query.lower()
+        matches = [w for w in workflows.values() if q in w['id'].lower() or q in w['name'].lower()]
+        
+        if not matches:
+            print_error(f"No workflow found matching '{query}'")
+            return
+        if len(matches) > 1:
+            print_warning(f"Multiple workflows found matching '{query}':")
+            for m in matches:
+                print(f"  • {m['name']} (ID: {m['id']})")
+            return
+        target_wf = matches[0]
+
+    skills_to_remove = get_skills_from_workflow(target_wf)
+    print_info(f"Uninstalling workflow skills for: \033[1m{target_wf['name']}\033[0m ({len(skills_to_remove)} skills)")
+    
+    count = 0
+    for skill in skills_to_remove:
+        print(f"  Uninstalling {skill}...")
+        uninstall_skill(skill)
+        count += 1
+        
+    print_success(f"Workflow uninstallation complete. Processed {count} skills.")
+
 def clear_all_skills(force: bool = False):
     """3.4 Clear All Skills"""
     if not PROJECT_SKILLS_DIR.exists():
@@ -494,6 +681,8 @@ def main():
     bs_parser = bundle_subparsers.add_parser("search", help="Search for bundles by name or skill")
     bs_parser.add_argument("query", help="Search query")
     
+
+    
     # bundle install <name>
     bi_parser = bundle_subparsers.add_parser("install", help="Install all skills in a bundle")
     bi_parser.add_argument("bundle_name", help="Name (or part of name) of the bundle")
@@ -501,6 +690,25 @@ def main():
     # bundle uninstall <name>
     bu_parser = bundle_subparsers.add_parser("uninstall", help="Uninstall all skills in a bundle")
     bu_parser.add_argument("bundle_name", help="Name (or part of name) of the bundle")
+
+    # --- Workflow Commands ---
+    workflow_parser = subparsers.add_parser("workflow", help="Manage workflows")
+    workflow_subparsers = workflow_parser.add_subparsers(dest="verb", help="Workflow actions")
+
+    # workflow list
+    workflow_subparsers.add_parser("list", help="List available workflows")
+
+    # workflow search <query>
+    ws_parser = workflow_subparsers.add_parser("search", help="Search workflows")
+    ws_parser.add_argument("query", help="Search query")
+
+    # workflow install <name>
+    wi_parser = workflow_subparsers.add_parser("install", help="Install skills from a workflow")
+    wi_parser.add_argument("workflow_name", help="Name or ID of the workflow")
+
+    # workflow uninstall <name>
+    wu_parser = workflow_subparsers.add_parser("uninstall", help="Uninstall skills from a workflow")
+    wu_parser.add_argument("workflow_name", help="Name or ID of the workflow")
 
     # Arguments parsing
     if len(sys.argv) == 1:
@@ -534,6 +742,17 @@ def main():
             uninstall_bundle(args.bundle_name)
         else:
             bundle_parser.print_help()
+    elif args.noun == "workflow":
+        if args.verb == "list":
+            list_workflows()
+        elif args.verb == "search":
+            search_workflows(args.query)
+        elif args.verb == "install":
+            install_workflow(args.workflow_name)
+        elif args.verb == "uninstall":
+            uninstall_workflow(args.workflow_name)
+        else:
+            parser.parse_args(["workflow", "--help"])
     else:
         parser.print_help()
 
