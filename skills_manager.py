@@ -46,6 +46,10 @@ def print_error(msg):
 def print_info(msg):
     print(f"\033[94mℹ️  {msg}\033[0m")
 
+def make_clickable(text: str, uri: str) -> str:
+    """Returns an OSC 8 hyperlink string."""
+    return f"\033]8;;{uri}\033\\{text}\033]8;;\033\\"
+
 def get_skill_names(directory: Path) -> List[str]:
     """Return a sorted list of skill names (directories) in the given path."""
     if not directory.exists():
@@ -67,7 +71,8 @@ def list_global():
     
     if skills:
         for skill in skills:
-            print(f"  • {skill}")
+            skill_path = GLOBAL_SKILLS_REPO / skill / "SKILL.md"
+            print(f"  • {make_clickable(skill, skill_path.as_uri())}")
         print(f"\nTotal: {len(skills)} global skills")
     else:
         print_warning("No global skills found.")
@@ -94,12 +99,20 @@ def list_project():
         if is_symlink:
             try:
                 target = os.readlink(item)
-                print(f"  • {item.name} \033[90m-> {target}\033[0m (Symlink)")
+                # Resolve target to find SKILL.md
+                target_path = Path(target)
+                if not target_path.is_absolute():
+                    target_path = (item.parent / target).resolve()
+                
+                # Link to SKILL.md of the target
+                item_link = make_clickable(item.name, (target_path / "SKILL.md").as_uri())
+                
+                print(f"  • {item_link} \033[90m-> {target}\033[0m (Symlink)")
             except OSError:
                  print(f"  • {item.name} (Invalid Symlink)")
             skills_found += 1
         elif is_dir:
-            print(f"  • {item.name} (Local Directory)")
+            print(f"  • {make_clickable(item.name, (item / 'SKILL.md').as_uri())} (Local Directory)")
             skills_found += 1
             
     print(f"\nTotal: {skills_found} installed skills")
@@ -136,7 +149,8 @@ def search_skills(query: str):
 
     if matches:
         for m in matches:
-            print(f"  • {m}")
+            skill_path = GLOBAL_SKILLS_REPO / m / "SKILL.md"
+            print(f"  • {make_clickable(m, skill_path.as_uri())}")
         print(f"\nFound {len(matches)} matches.")
     else:
         print_warning("No matching skills found.")
@@ -273,7 +287,15 @@ def list_bundles():
 
     for bundle_name, skills in bundles.items():
         print(f"\n📦 \033[1m{bundle_name}\033[0m")
-        print(f"   Contains {len(skills)} skills: {', '.join(skills[:5])}{'...' if len(skills)>5 else ''}")
+        
+        # Make skills clickable
+        display_skills = []
+        for s in skills[:5]:
+            path = GLOBAL_SKILLS_REPO / s / "SKILL.md"
+            display_skills.append(make_clickable(s, path.as_uri()))
+            
+        joined = ', '.join(display_skills)
+        print(f"   Contains {len(skills)} skills: {joined}{'...' if len(skills)>5 else ''}")
         
     print(f"\nTotal: {len(bundles)} bundles available.")
 
