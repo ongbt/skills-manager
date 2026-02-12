@@ -290,14 +290,55 @@ def list_bundles():
         
         # Make skills clickable
         display_skills = []
-        for s in skills[:5]:
+        for s in skills:
             path = GLOBAL_SKILLS_REPO / s / "SKILL.md"
             display_skills.append(make_clickable(s, path.as_uri()))
             
         joined = ', '.join(display_skills)
-        print(f"   Contains {len(skills)} skills: {joined}{'...' if len(skills)>5 else ''}")
+        print(f"   Contains {len(skills)} skills: {joined}")
         
     print(f"\nTotal: {len(bundles)} bundles available.")
+
+def search_bundles(query: str):
+    """3.3.4 Search Bundles"""
+    print_info(f"Searching Bundles for '{query}'...")
+    bundles = parse_bundles()
+    
+    if not bundles:
+        print_warning("No bundles found or BUNDLES.md is missing.")
+        return
+
+    query_lower = query.lower()
+    matches = {}
+
+    for bundle_name, skills in bundles.items():
+        # Check bundle name
+        if query_lower in bundle_name.lower():
+            matches[bundle_name] = skills
+            continue
+        
+        # Check skill names
+        for skill in skills:
+            if query_lower in skill.lower():
+                matches[bundle_name] = skills
+                break
+    
+    if not matches:
+        print_warning(f"No bundles found matching '{query}'.")
+        return
+
+    for bundle_name, skills in matches.items():
+        print(f"\n📦 \033[1m{bundle_name}\033[0m")
+        
+        display_skills = []
+        for s in skills:
+            path = GLOBAL_SKILLS_REPO / s / "SKILL.md"
+            display_skills.append(make_clickable(s, path.as_uri()))
+            
+        joined = ', '.join(display_skills)
+        print(f"   Contains {len(skills)} skills: {joined}")
+        
+    print(f"\nFound {len(matches)} matching bundles.")
 
 def install_bundle(bundle_query: str):
     """3.3.2 Install Bundle"""
@@ -449,6 +490,10 @@ def main():
     # bundle list
     bundle_subparsers.add_parser("list", help="List available skill bundles")
     
+    # bundle search <query>
+    bs_parser = bundle_subparsers.add_parser("search", help="Search for bundles by name or skill")
+    bs_parser.add_argument("query", help="Search query")
+    
     # bundle install <name>
     bi_parser = bundle_subparsers.add_parser("install", help="Install all skills in a bundle")
     bi_parser.add_argument("bundle_name", help="Name (or part of name) of the bundle")
@@ -481,6 +526,8 @@ def main():
     elif args.noun == "bundle":
         if args.verb == "list":
             list_bundles()
+        elif args.verb == "search":
+            search_bundles(args.query)
         elif args.verb == "install":
             install_bundle(args.bundle_name)
         elif args.verb == "uninstall":
