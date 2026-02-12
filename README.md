@@ -39,6 +39,10 @@ The **Skills Manager** operates on a simple but effective linking philosophy:
 -   **Global Skills Repository** installed at:
     -   Windows: `%USERPROFILE%\.agent\skills`
     -   Linux/Mac: `~/.agent/skills`
+    -   *Installation*:
+        ```bash
+        git clone https://github.com/sickn33/antigravity-awesome-skills.git ~/.agent/skills
+        ```
 
 ---
 
