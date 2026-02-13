@@ -97,7 +97,7 @@ def test_install_skill(mock_dirs):
     _, project_repo, _, _ = mock_dirs
     
     # Install
-    skills_manager.install_skill("skill-alpha")
+    skills_manager.install_skill(["skill-alpha"])
     
     installed_path = project_repo / "skill-alpha"
     assert installed_path.exists()
@@ -108,8 +108,17 @@ def test_install_skill(mock_dirs):
     # On Windows, readlink might return absolute path, let's just check existence
     assert Path(target).name == "skill-alpha"
 
+def test_install_multiple_skills(mock_dirs):
+    _, project_repo, _, _ = mock_dirs
+    
+    # Install multiple skills
+    skills_manager.install_skill(["skill-alpha", "skill-beta"])
+    
+    assert (project_repo / "skill-alpha").exists()
+    assert (project_repo / "skill-beta").exists()
+
 def test_install_nonexistent_skill(mock_dirs, capsys):
-    skills_manager.install_skill("fake-skill")
+    skills_manager.install_skill(["fake-skill"])
     captured = capsys.readouterr()
     assert "not found" in captured.out
 
@@ -117,15 +126,30 @@ def test_uninstall_skill(mock_dirs, capsys):
     _, project_repo, _, _ = mock_dirs
     
     # Install first
-    skills_manager.install_skill("skill-beta")
+    skills_manager.install_skill(["skill-beta"])
     assert (project_repo / "skill-beta").exists()
 
     # Uninstall
-    skills_manager.uninstall_skill("skill-beta")
+    skills_manager.uninstall_skill(["skill-beta"])
     captured = capsys.readouterr()
     
     assert not (project_repo / "skill-beta").exists()
     assert "Uninstalled skill-beta" in captured.out
+
+def test_uninstall_multiple_skills(mock_dirs, capsys):
+    _, project_repo, _, _ = mock_dirs
+    
+    # Install first
+    skills_manager.install_skill(["skill-alpha", "skill-beta"])
+    assert (project_repo / "skill-alpha").exists()
+    assert (project_repo / "skill-beta").exists()
+
+    # Uninstall both
+    skills_manager.uninstall_skill(["skill-alpha", "skill-beta"])
+    captured = capsys.readouterr()
+    
+    assert not (project_repo / "skill-alpha").exists()
+    assert not (project_repo / "skill-beta").exists()
 
 def test_parse_bundles(mock_dirs):
     bundles = skills_manager.parse_bundles()
@@ -144,7 +168,7 @@ def test_install_bundle(mock_dirs, capsys):
     _, project_repo, _, _ = mock_dirs
     
     # Install Bundle by partial name
-    skills_manager.install_bundle("Starter")
+    skills_manager.install_bundle(["Starter"])
     
     assert (project_repo / "skill-alpha").exists()
     assert (project_repo / "skill-beta").exists()
@@ -154,13 +178,13 @@ def test_uninstall_bundle(mock_dirs):
     _, project_repo, _, _ = mock_dirs
     
     # Setup: Install all skills manually first
-    skills_manager.install_skill("skill-alpha")
-    skills_manager.install_skill("skill-beta")
+    skills_manager.install_skill(["skill-alpha"])
+    skills_manager.install_skill(["skill-beta"])
     
     assert (project_repo / "skill-alpha").exists()
     
     # Uninstall Bundle
-    skills_manager.uninstall_bundle("Starter")
+    skills_manager.uninstall_bundle(["Starter"])
     
     assert not (project_repo / "skill-alpha").exists()
     assert not (project_repo / "skill-beta").exists()
@@ -169,8 +193,8 @@ def test_clear_all_skills(mock_dirs, monkeypatch):
     _, project_repo, _, _ = mock_dirs
     
     # Setup
-    skills_manager.install_skill("skill-alpha")
-    skills_manager.install_skill("complex-skill-gamma")
+    skills_manager.install_skill(["skill-alpha"])
+    skills_manager.install_skill(["complex-skill-gamma"])
     
     assert len(list(project_repo.iterdir())) == 2
     
@@ -185,7 +209,7 @@ def test_clear_all_skills_force(mock_dirs):
     _, project_repo, _, _ = mock_dirs
     
     # Setup
-    skills_manager.install_skill("skill-alpha")
+    skills_manager.install_skill(["skill-alpha"])
     
     # Clear with force=True (no input needed)
     skills_manager.clear_all_skills(force=True)
@@ -201,7 +225,7 @@ def test_install_workflow(mock_dirs):
     _, project_repo, _, _ = mock_dirs
     
     # Install workflow
-    skills_manager.install_workflow("test-workflow")
+    skills_manager.install_workflow(["test-workflow"])
     
     assert (project_repo / "skill-alpha").exists()
     assert (project_repo / "skill-beta").exists()

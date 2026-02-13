@@ -163,8 +163,8 @@ def search_skills(query: str):
     else:
         print_warning("No matching skills found.")
 
-def install_skill(skill_name: str):
-    """3.2.1 Install Skill"""
+def install_skill_single(skill_name: str):
+    """Internal function to install a single skill"""
     source_path = GLOBAL_SKILLS_REPO / skill_name
     dest_path = PROJECT_SKILLS_DIR / skill_name
 
@@ -210,8 +210,13 @@ def install_skill(skill_name: str):
     except Exception as e:
         print_error(f"Installation failed: {e}")
 
-def uninstall_skill(skill_name: str):
-    """3.2.2 Uninstall Skill"""
+def install_skill(skill_names: List[str]):
+    """3.2.1 Install Skill(s)"""
+    for skill in skill_names:
+        install_skill_single(skill)
+
+def uninstall_skill_single(skill_name: str):
+    """Internal function to uninstall a single skill"""
     target = PROJECT_SKILLS_DIR / skill_name
 
     if not target.exists() and not target.is_symlink(): # check is_symlink for broken links
@@ -235,6 +240,11 @@ def uninstall_skill(skill_name: str):
             
     except Exception as e:
         print_error(f"Uninstallation failed: {e}")
+
+def uninstall_skill(skill_names: List[str]):
+    """3.2.2 Uninstall Skill(s)"""
+    for skill in skill_names:
+        uninstall_skill_single(skill)
 
 def parse_bundles() -> dict:
     """
@@ -348,8 +358,8 @@ def search_bundles(query: str):
         
     print(f"\nFound {len(matches)} matching bundles.")
 
-def install_bundle(bundle_query: str):
-    """3.3.2 Install Bundle"""
+def install_bundle_single(bundle_query: str):
+    """Internal function to install single bundle"""
     bundles = parse_bundles()
     
     # Fuzzy match bundle name
@@ -376,13 +386,18 @@ def install_bundle(bundle_query: str):
         # Check if skill exists in listed global skills to avoid errors
         # (Though install_skill verifies this too, it's good to be noisy here)
         print(f"  Installing {skill}...")
-        install_skill(skill)
+        install_skill_single(skill)
         success_count += 1
         
     print_success(f"Bundle installation complete. processed {success_count} skills.")
 
-def uninstall_bundle(bundle_query: str):
-    """3.3.3 Uninstall Bundle"""
+def install_bundle(bundle_names: List[str]):
+    """3.3.2 Install Bundle(s)"""
+    for bundle_name in bundle_names:
+        install_bundle_single(bundle_name)
+
+def uninstall_bundle_single(bundle_query: str):
+    """Internal function to uninstall single bundle"""
     bundles = parse_bundles()
     
     # Fuzzy match bundle name
@@ -407,10 +422,15 @@ def uninstall_bundle(bundle_query: str):
     success_count = 0
     for skill in skills_to_remove:
         print(f"  Uninstalling {skill}...")
-        uninstall_skill(skill)
+        uninstall_skill_single(skill)
         success_count += 1
         
     print_success(f"Bundle uninstallation complete. Processed {success_count} skills.")
+
+def uninstall_bundle(bundle_names: List[str]):
+    """3.3.3 Uninstall Bundle(s)"""
+    for bundle_name in bundle_names:
+        uninstall_bundle_single(bundle_name)
 
 # --- Workflow Implementations ---
 
@@ -527,8 +547,8 @@ def get_skills_from_workflow(wf_data: dict) -> list:
         skills.update(step.get('recommendedSkills', []))
     return sorted(list(skills))
 
-def install_workflow(query: str):
-    """3.4.3 Install Workflow Skills"""
+def install_workflow_single(query: str):
+    """Internal function to install single workflow"""
     workflows = parse_workflows()
     
     # Exact ID match first
@@ -555,13 +575,18 @@ def install_workflow(query: str):
     count = 0
     for skill in skills_to_install:
         print(f"  Installing {skill}...")
-        install_skill(skill)
+        install_skill_single(skill)
         count += 1
         
     print_success(f"Workflow installation complete. Processed {count} skills.")
 
-def uninstall_workflow(query: str):
-    """3.4.4 Uninstall Workflow Skills"""
+def install_workflow(queries: List[str]):
+    """3.4.3 Install Workflow Skills"""
+    for query in queries:
+        install_workflow_single(query)
+
+def uninstall_workflow_single(query: str):
+    """Internal function to uninstall single workflow"""
     workflows = parse_workflows()
     
     if query in workflows:
@@ -586,10 +611,15 @@ def uninstall_workflow(query: str):
     count = 0
     for skill in skills_to_remove:
         print(f"  Uninstalling {skill}...")
-        uninstall_skill(skill)
+        uninstall_skill_single(skill)
         count += 1
         
     print_success(f"Workflow uninstallation complete. Processed {count} skills.")
+
+def uninstall_workflow(queries: List[str]):
+    """3.4.4 Uninstall Workflow Skills"""
+    for query in queries:
+        uninstall_workflow_single(query)
 
 def clear_all_skills(force: bool = False):
     """3.4 Clear All Skills"""
@@ -658,12 +688,12 @@ def main():
     search_parser.add_argument("query", help="Search term")
 
     # install
-    install_parser = subparsers.add_parser("install", help="Install a skill to current project")
-    install_parser.add_argument("skill_name", help="Name of the skill to install")
+    install_parser = subparsers.add_parser("install", help="Install skill(s) to current project")
+    install_parser.add_argument("skill_names", nargs='+', help="Name(s) of the skill to install")
 
     # uninstall
-    uninstall_parser = subparsers.add_parser("uninstall", help="Remove a skill from current project")
-    uninstall_parser.add_argument("skill_name", help="Name of the skill to remove")
+    uninstall_parser = subparsers.add_parser("uninstall", help="Remove skill(s) from current project")
+    uninstall_parser.add_argument("skill_names", nargs='+', help="Name(s) of the skill to remove")
 
     # clear
     clear_parser = subparsers.add_parser("clear", help="Remove all skills from current project")
@@ -681,15 +711,13 @@ def main():
     bs_parser = bundle_subparsers.add_parser("search", help="Search for bundles by name or skill")
     bs_parser.add_argument("query", help="Search query")
     
-
-    
     # bundle install <name>
     bi_parser = bundle_subparsers.add_parser("install", help="Install all skills in a bundle")
-    bi_parser.add_argument("bundle_name", help="Name (or part of name) of the bundle")
+    bi_parser.add_argument("bundle_names", nargs='+', help="Name(s) (or part of name) of the bundle")
 
     # bundle uninstall <name>
     bu_parser = bundle_subparsers.add_parser("uninstall", help="Uninstall all skills in a bundle")
-    bu_parser.add_argument("bundle_name", help="Name (or part of name) of the bundle")
+    bu_parser.add_argument("bundle_names", nargs='+', help="Name(s) (or part of name) of the bundle")
 
     # --- Workflow Commands ---
     workflow_parser = subparsers.add_parser("workflow", help="Manage workflows")
@@ -704,11 +732,11 @@ def main():
 
     # workflow install <name>
     wi_parser = workflow_subparsers.add_parser("install", help="Install skills from a workflow")
-    wi_parser.add_argument("workflow_name", help="Name or ID of the workflow")
+    wi_parser.add_argument("workflow_names", nargs='+', help="Name or ID of the workflow(s)")
 
     # workflow uninstall <name>
     wu_parser = workflow_subparsers.add_parser("uninstall", help="Uninstall skills from a workflow")
-    wu_parser.add_argument("workflow_name", help="Name or ID of the workflow")
+    wu_parser.add_argument("workflow_names", nargs='+', help="Name or ID of the workflow(s)")
 
     # Arguments parsing
     if len(sys.argv) == 1:
@@ -726,9 +754,9 @@ def main():
     elif args.noun == "search":
         search_skills(args.query)
     elif args.noun == "install":
-        install_skill(args.skill_name)
+        install_skill(args.skill_names)
     elif args.noun == "uninstall":
-        uninstall_skill(args.skill_name)
+        uninstall_skill(args.skill_names)
     elif args.noun == "clear":
         clear_all_skills(args.force)
     elif args.noun == "bundle":
@@ -737,9 +765,9 @@ def main():
         elif args.verb == "search":
             search_bundles(args.query)
         elif args.verb == "install":
-            install_bundle(args.bundle_name)
+            install_bundle(args.bundle_names)
         elif args.verb == "uninstall":
-            uninstall_bundle(args.bundle_name)
+            uninstall_bundle(args.bundle_names)
         else:
             bundle_parser.print_help()
     elif args.noun == "workflow":
@@ -748,9 +776,9 @@ def main():
         elif args.verb == "search":
             search_workflows(args.query)
         elif args.verb == "install":
-            install_workflow(args.workflow_name)
+            install_workflow(args.workflow_names)
         elif args.verb == "uninstall":
-            uninstall_workflow(args.workflow_name)
+            uninstall_workflow(args.workflow_names)
         else:
             parser.parse_args(["workflow", "--help"])
     else:
