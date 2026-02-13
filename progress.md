@@ -19,10 +19,13 @@
 - [x] Created `architecture/cli_design.md` SOP.
 - [x] Updated `tests/test_skills_manager.py` to include fuzzy search and workflow tests.
 - [x] Verified all tests pass with `pytest`.
+- [x] **UPDATE**: Implemented multi-argument support for install/uninstall commands.
+- [x] **UPDATE**: Updated tests to cover multi-skill operations.
 
 ## Phase 4: S - Stylize (Refinement & UI)
 - [x] Verified CLI output includes standard emojis and colors.
 - [x] `README.md` is up-to-date and formatted correctly.
+- [x] **UPDATE**: Enhanced CLI Help Screen with detailed description and usage examples.
 
 ## Phase 5: T - Trigger (Deployment)
 - [x] System is ready for use.

@@ -674,7 +674,39 @@ def clear_all_skills(force: bool = False):
 # --- Main CLI ---
 
 def main():
-    parser = argparse.ArgumentParser(description="Skills Manager CLI for Antigravity")
+    parser = argparse.ArgumentParser(
+        description="""
+Skills Manager CLI for Antigravity
+----------------------------------
+Manage your AI coding skills, bundles, and workflows directly from the terminal.
+This tool symlinks skills from your global repository (~/.agent/skills)
+into your current project's .agent/skills directory.
+""",
+        epilog="""
+Examples:
+  # List all skills available in the global library:
+  python skills_manager.py list --global
+
+  # Search for a specific skill (fuzzy match):
+  python skills_manager.py search "planning"
+
+  # Install specific skills (space separated):
+  python skills_manager.py install concise-planning systematic-debugging
+
+  # Install a curated bundle of skills:
+  python skills_manager.py bundle install "Essentials"
+
+  # Install skills for a specific workflow:
+  python skills_manager.py workflow install ship-saas-mvp
+
+  # Remove skills from your project:
+  python skills_manager.py uninstall concise-planning
+
+  # See help for a specific command:
+  python skills_manager.py bundle --help
+""",
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     subparsers = parser.add_subparsers(dest="noun", help="Available commands")
 
     # --- Skill Commands (Implicit/Top-level) ---
